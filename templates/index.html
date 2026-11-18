@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Behind the Email // MailRadar OSINT & Email Intelligence</title>
+  
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232dd4bf'><path d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/></svg>">
+  
+  <!-- Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bte-theme">
+
+  <!-- Main Container -->
+  <div class="bte-app">
+    
+    <!-- Top Navigation Bar -->
+    <header class="bte-navbar">
+      <div class="nav-brand">
+        <div class="brand-logo-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="3" stroke="#2dd4bf"></rect>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" stroke="#2dd4bf"></path>
+            <circle cx="16" cy="14" r="3" fill="#0e1113" stroke="#2dd4bf" stroke-width="2"></circle>
+            <path d="m18.5 16.5 2.5 2.5" stroke="#2dd4bf" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-main">Behind the Email</span>
+          <span class="brand-sub">MailRadar AI</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <div class="api-badge" title="Live APIs Active">
+          <span class="live-dot"></span>
+          <span>LIVE INTEL</span>
+        </div>
+        <button type="button" class="nav-menu-btn" id="navMenuBtn" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero Search Section -->
+    <section class="bte-hero" id="heroSection">
+      <div class="hero-content">
+        <h1 class="hero-title">Look up any email</h1>
+        <p class="hero-subtitle">
+          See the public accounts, work history, photos, and breaches tied to an address, streamed in as each source answers.
+        </p>
+
+        <!-- Search Form -->
+        <form id="analyzeForm" class="bte-search-form" autocomplete="off" novalidate>
+          <div class="search-input-box">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            </span>
+            <input 
+              type="email" 
+              id="emailInput" 
+              name="email" 
+              class="bte-input" 
+              placeholder="Enter an email address to analyze in real time" 
+              value=""
+              spellcheck="false" 
+              required
+            >
+            <button type="button" id="clearBtn" class="bte-clear-btn" aria-label="Clear input">&times;</button>
+          </div>
+          <button type="submit" id="analyzeBtn" class="bte-submit-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Search</span>
+          </button>
+        </form>
+
+
+        <!-- Tips List -->
+        <div class="bte-tips-card">
+          <span class="tips-heading">Tips</span>
+          <ul class="tips-list">
+            <li>
+              <span class="tip-icon">&#9889;</span>
+              <span><strong>Live Sources:</strong> Profiles, accounts, and DNS records are interrogated in real time instead of pulled from stale databases.</span>
+            </li>
+            <li>
+              <span class="tip-icon">&#128277;</span>
+              <span><strong>Silent Intelligence:</strong> Lookups are 100% passive and silent. Nothing is ever delivered or notified to the investigated address.</span>
+            </li>
+            <li>
+              <span class="tip-icon">&#9993;</span>
+              <span><strong>Syntax Normalization:</strong> RFC 5322 validation, alias unmasking, and subaddress detection ensure accurate domain extraction.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Error Banner -->
+        <div id="errorBanner" class="bte-error-banner hidden" role="alert">
+          <span class="error-icon">&#9888;</span>
+          <span id="errorMessage" class="error-msg"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Dashboard Section -->
+    <main id="resultsDashboard" class="bte-results-dashboard hidden">
+
+      <!-- Real-Time BehindTheEmail Live Streaming HUD -->
+      <section class="bte-stream-hud" id="streamHud">
+        <div class="hud-top">
+          <div class="hud-status">
+            <span class="live-pulse-dot"></span>
+            <span class="hud-status-title" id="hudStatusTitle">Connecting to live intelligence feeds...</span>
+          </div>
+          <span class="hud-stats" id="hudStats">0/20 sources answered</span>
+        </div>
+        <div class="hud-progress-bar-track">
+          <div class="hud-progress-bar-fill" id="hudProgressFill" style="width: 5%;"></div>
+        </div>
+        <div class="hud-source-tags" id="hudSourceTags">
+          <!-- Dynamic source pills will stream here in real time -->
+        </div>
+      </section>
+
+      <!-- Result Target Header -->
+      <section class="target-header-card">
+        <div class="target-title-row">
+          <div class="target-email-col">
+            <h2 id="targetEmailDisplay" class="target-email-title">Target Email</h2>
+            <div class="target-meta">
+              <span id="targetStatusPill" class="status-pill status-found">
+                <span class="pill-dot"></span>
+                <span id="targetStatusText">Scanning</span>
+              </span>
+              <span id="searchTimestamp" class="search-timestamp">Searched just now</span>
+            </div>
+          </div>
+          <button type="button" id="newSearchBtn" class="new-search-btn">
+            <span>&larr; New Search</span>
+          </button>
+        </div>
+
+        <!-- Main Identity Highlight Card -->
+        <div class="identity-profile-box">
+          <div class="identity-header-row">
+            <div class="avatar-cluster">
+              <img id="primaryAvatar" class="avatar-front" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%2323282f'><rect width='100' height='100' rx='20'/><circle cx='50' cy='40' r='18' fill='%239ca3af'/><path d='M22 85c0-16 12-28 28-28s28 12 28 28' fill='%239ca3af'/></svg>" alt="Profile avatar">
+              <img id="secondaryAvatar" class="avatar-back" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%2323282f'><rect width='100' height='100' rx='20'/><circle cx='50' cy='40' r='18' fill='%239ca3af'/><path d='M22 85c0-16 12-28 28-28s28 12 28 28' fill='%239ca3af'/></svg>" alt="Account avatar" style="display: none;">
+            </div>
+            <div class="identity-info-block">
+              <div class="identity-name-row">
+                <h3 id="profileFullName" class="identity-full-name">Searching Identity...</h3>
+                <span id="usernameLockPill" class="privacy-lock-pill">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <span>Real-Time OSINT</span>
+                </span>
+              </div>
+              <p id="profileHeadline" class="identity-headline">
+                Interrogating live infrastructure and public profiles...
+              </p>
+              <div class="identity-location-row" id="locationRow" style="display: none;">
+                <span class="location-icon">&#128205;</span>
+                <span id="profileLocation" class="location-text"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3-Column Metrics Row -->
+          <div class="metrics-grid-3">
+            <div class="metric-item">
+              <span id="metricAccountsCount" class="metric-value">0</span>
+              <span id="metricAccountsLabel" class="metric-label">accounts found</span>
+            </div>
+            <div class="metric-item">
+              <span id="metricActiveSince" class="metric-value">Scanning...</span>
+              <span class="metric-label">active since</span>
+            </div>
+            <div class="metric-item">
+              <span id="metricLatestActivity" class="metric-value">Scanning...</span>
+              <span class="metric-label">latest activity</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Profile Pictures Section -->
+      <section class="intel-card-section" id="picturesSection">
+        <div class="section-label-row">
+          <span class="section-label-icon">&#128100;</span>
+          <span class="section-label-title">Profile pictures (<span id="picCount">0</span>)</span>
+        </div>
+        <div id="picturesGallery" class="pictures-gallery">
+          <!-- Dynamically populated pictures -->
+        </div>
+      </section>
+
+      <!-- Grouped Intelligence Summary Pills -->
+      <section class="pills-summary-card">
+        
+        <!-- Names Row -->
+        <div class="pills-row">
+          <div class="pills-row-label">
+            <span class="row-icon">&#128100;</span>
+            <span>Names (<span id="namesCount">0</span>)</span>
+          </div>
+          <div id="namesPills" class="pills-container">
+            <span class="meta-pill" style="color: var(--text-dim);">Scanning live sources...</span>
+          </div>
+        </div>
+
+        <!-- Usernames Row -->
+        <div class="pills-row">
+          <div class="pills-row-label">
+            <span class="row-icon">&#128100;</span>
+            <span>Usernames (<span id="usernamesCount">0</span>)</span>
+          </div>
+          <div id="usernamesPills" class="pills-container">
+            <span class="meta-pill" style="color: var(--text-dim);">Scanning live sources...</span>
+          </div>
+        </div>
+
+        <!-- Locations Row -->
+        <div class="pills-row">
+          <div class="pills-row-label">
+            <span class="row-icon">&#128205;</span>
+            <span>Locations (<span id="locationsCount">0</span>)</span>
+          </div>
+          <div id="locationsPills" class="pills-container">
+            <span class="meta-pill" style="color: var(--text-dim);">Scanning live sources...</span>
+          </div>
+        </div>
+
+        <!-- Links Row -->
+        <div class="pills-row">
+          <div class="pills-row-label">
+            <span class="row-icon">&#128279;</span>
+            <span>Links (<span id="linksCount">0</span>)</span>
+          </div>
+          <div id="linksPills" class="pills-container">
+            <span class="meta-pill" style="color: var(--text-dim);">Scanning live sources...</span>
+          </div>
+        </div>
+
+        <!-- Dates Row -->
+        <div class="pills-row">
+          <div class="pills-row-label">
+            <span class="row-icon">&#128197;</span>
+            <span>Dates (<span id="datesCount">0</span>)</span>
+          </div>
+          <div id="datesPills" class="pills-container">
+            <span class="meta-pill" style="color: var(--text-dim);">Scanning live sources...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Provider Details Stack -->
+      <section class="providers-stack" id="providersStack">
+        <!-- Live Dynamically Streamed Account Cards Container -->
+        <div id="dynamicAccountsContainer"></div>
+
+        <!-- 1. Google Account Card -->
+        <div class="provider-card provider-google" id="googleProviderCard" style="display: none;">
+          <div class="provider-card-header">
+            <div class="provider-title-left">
+              <span class="provider-icon google-color-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+              </span>
+              <span class="provider-name">Google</span>
+            </div>
+            <div class="provider-header-right">
+              <span class="category-pill">Social</span>
+              <span class="lock-icon">&#128274;</span>
+              <span class="expand-arrow">&or;</span>
+            </div>
+          </div>
+
+          <div class="google-banner-hero">
+            <div class="google-avatar-wrapper">
+              <img id="googleAvatarImg" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%236ba4f8'/><stop offset='100%25' stop-color='%234285f4'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><circle cx='50' cy='38' r='18' fill='%23ffffff' opacity='0.9'/><path d='M20 86c0-16.5 13.5-28 30-28s30 11.5 30 28' fill='%23ffffff' opacity='0.9'/></svg>" alt="Google profile avatar">
+            </div>
+          </div>
+
+          <div class="provider-card-body">
+            <h4 class="provider-account-title">Google account</h4>
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="detail-label">Last active</span>
+                <span id="googleLastActive" class="detail-val">Nov 14, 2026</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Account type</span>
+                <span id="googleAccountType" class="detail-val">Personal</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Mailbox Handshake</span>
+                <span id="googleSmtpStatus" class="detail-val status-val-valid">Accepted by Mail Server (Handshake)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. GitHub Card -->
+        <div class="provider-card provider-github" id="githubProviderCard" style="display: none;">
+          <div class="provider-card-header">
+            <div class="provider-title-left">
+              <span class="provider-icon github-color-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                </svg>
+              </span>
+              <span class="provider-name">GitHub</span>
+            </div>
+            <div class="provider-header-right">
+              <span class="category-pill">Developer</span>
+              <span class="lock-icon">&#128274;</span>
+              <span class="expand-arrow">&or;</span>
+            </div>
+          </div>
+
+          <div class="github-hero-cluster">
+            <img id="githubAvatarImg" class="github-identicon" src="https://avatars.githubusercontent.com/u/9919?s=200&v=4" alt="GitHub identicon">
+            <span class="github-hidden-pill">&#128274; Username hidden</span>
+          </div>
+
+          <div class="provider-card-body">
+            <div class="github-stats-grid">
+              <div class="gh-stat-box">
+                <span id="ghFollowers" class="gh-stat-num">0</span>
+                <span class="gh-stat-sub">Followers</span>
+              </div>
+              <div class="gh-stat-box">
+                <span id="ghFollowing" class="gh-stat-num">0 accounts</span>
+                <span class="gh-stat-sub">Following</span>
+              </div>
+              <div class="gh-stat-box">
+                <span id="ghRepos" class="gh-stat-num">0</span>
+                <span class="gh-stat-sub">Public repos</span>
+              </div>
+            </div>
+
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="detail-label">Joined</span>
+                <span id="ghJoined" class="detail-val">Jul 5, 2026</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Last active</span>
+                <span id="ghLastActive" class="detail-val">Jul 5, 2026</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Account type</span>
+                <span class="detail-val">Personal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. LinkedIn Card -->
+        <div class="provider-card provider-linkedin" id="linkedinProviderCard" style="display: none;">
+          <div class="provider-card-header">
+            <div class="provider-title-left">
+              <span class="provider-icon linkedin-color-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#0A66C2">
+                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+                </svg>
+              </span>
+              <span class="provider-name">LinkedIn</span>
+            </div>
+            <div class="provider-header-right">
+              <span class="category-pill">Work</span>
+              <span class="lock-icon">&#128274;</span>
+              <span class="expand-arrow">&or;</span>
+            </div>
+          </div>
+
+          <div class="provider-card-body">
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+              <img id="linkedinAvatarImg" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%2323282f'><circle cx='50' cy='50' r='50'/><circle cx='50' cy='40' r='18' fill='%239ca3af'/><path d='M22 85c0-16 12-28 28-28s28 12 28 28' fill='%239ca3af'/></svg>" alt="LinkedIn profile picture" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.12); flex-shrink: 0;">
+              <div>
+                <h4 id="linkedinDisplayName" class="provider-account-title" style="margin: 0; font-size: 1.1rem;">Golla Santhosh</h4>
+                <span class="github-hidden-pill" style="margin-top: 4px; display: inline-block;">&#128274; Username hidden</span>
+              </div>
+            </div>
+            <p id="linkedinHeadline" class="linkedin-subheadline" style="margin-bottom: 12px; color: var(--text-secondary); line-height: 1.45;">B-TECH STUDENT | Cyber security Enthusiast | Problem -solving Engineer</p>
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="detail-label">&#128205; Location</span>
+                <span id="linkedinLocation" class="detail-val">Hyderabad, Telangana, India</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Work Category</span>
+                <span class="detail-val">Cybersecurity & Engineering</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. MailRadar DNS & Security Authentication Card -->
+        <div class="provider-card provider-security" id="dnsSecurityCard">
+          <div class="provider-card-header">
+            <div class="provider-title-left">
+              <span class="provider-icon security-shield-icon">&#128737;</span>
+              <span class="provider-name">Mail Server & DNS Infrastructure</span>
+            </div>
+            <div class="provider-header-right">
+              <span class="category-pill pill-security">Verified</span>
+              <span class="expand-arrow">&or;</span>
+            </div>
+          </div>
+
+          <div class="provider-card-body">
+            <div class="dns-grid">
+              <div class="dns-item">
+                <span class="dns-label">MX Status</span>
+                <span id="cardMxStatus" class="dns-val badge-valid">Found</span>
+                <span id="cardMxHost" class="dns-sub">smtp.google.com (10)</span>
+              </div>
+              <div class="dns-item">
+                <span class="dns-label">SPF Record</span>
+                <span id="cardSpfStatus" class="dns-val badge-valid">Found</span>
+                <span id="cardSpfPolicy" class="dns-sub">v=spf1 include:_spf.google.com ~all</span>
+              </div>
+              <div class="dns-item">
+                <span class="dns-label">DMARC Policy</span>
+                <span id="cardDmarcStatus" class="dns-val badge-valid">Found</span>
+                <span id="cardDmarcPolicy" class="dns-sub">p=reject (Enforced)</span>
+              </div>
+              <div class="dns-item">
+                <span class="dns-label">Deliverability</span>
+                <span id="cardDeliverability" class="dns-val badge-valid">DELIVERABLE</span>
+                <span id="cardQualityScore" class="dns-sub">Quality Score: 0.95</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Threat Intelligence & Breach Card -->
+        <div class="provider-card provider-breaches" id="threatCard">
+          <div class="provider-card-header">
+            <div class="provider-title-left">
+              <span class="provider-icon breach-warn-icon">&#9888;</span>
+              <span class="provider-name">Threat Intelligence & Leaks</span>
+            </div>
+            <div class="provider-header-right">
+              <span id="cardRiskTierBadge" class="category-pill pill-risk">Low Risk</span>
+              <span class="expand-arrow">&or;</span>
+            </div>
+          </div>
+
+          <div class="provider-card-body">
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="detail-label">Credential Breaches</span>
+                <span id="cardBreachCount" class="detail-val">None Detected</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Breach Source / Attribution</span>
+                <span id="cardBreachSource" class="detail-val">Have I Been Pwned</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Infostealer Malware</span>
+                <span id="cardStealerStatus" class="detail-val">Clean (No infection logs)</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Suspicious Username</span>
+                <span id="cardSuspiciousUser" class="detail-val">NO (Clean Local Part)</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Domain Longevity</span>
+                <span id="cardDomainAge" class="detail-val">11,418 days registered</span>
+              </div>
+            </div>
+
+            <!-- HIBP Breach Details Container -->
+            <div id="hibpBreachContainer" class="hibp-breaches-wrapper" style="display: none;">
+              <h5 class="hibp-subtitle">Have I Been Pwned Incident Details</h5>
+              <div id="hibpBreachList" class="hibp-cards-list"></div>
+              <div class="hibp-attribution-note">
+                <small>Data provided by <a href="https://haveibeenpwned.com" target="_blank" rel="noopener noreferrer">Have I Been Pwned</a> under Creative Commons Attribution 4.0 International License.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bte-footer">
+      <div class="footer-row">
+        <span>Behind the Email // MailRadar Security v1.0</span>
+        <span class="footer-links">Passive OSINT &bull; Real-Time Intelligence</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript -->
+  <script src="{{ url_for('static', filename='script.js') }}?v=6.0"></script>
+</body>
+</html>
